@@ -44,8 +44,6 @@ def video_camera():
 
 
 test = True  # delete it after tput the logic
-
-
 @app.route("/get-text")
 def get_text():
     # put the logic here
@@ -57,9 +55,22 @@ def get_text():
         return "abc"
     else:
         test = True
-        return "z"
+        return "abcc"
 
+cloudtest = True  # delete it after tput the logic
+@app.route("/get-cloud-text")
+def get_cloud_text():
+    # put the logic here
 
+    global cloudtest
+    print("Current test value:", cloudtest)
+    if cloudtest:
+        cloudtest = False
+        return "efh"
+    else:
+        cloudtest = True
+        return "efg"
+    
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
     # Start the Flask web application with debugging enabled, listening on all available network interfaces and port 5000
