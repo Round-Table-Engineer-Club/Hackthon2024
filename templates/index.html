@@ -40,7 +40,7 @@
             border-bottom: 1px solid black;  /* Optional border between the text areas */
         }
 
-        #gpt_fix_outputText {
+        #Cloud_fix_outputText {
             flex: 1;
             padding: 10px;
             overflow-y: scroll;
@@ -63,10 +63,30 @@
      <div id="container">
         <img id="videoFeed" src="{{ url_for('video_camera') }}" style="height: 100%; width: 1px" alt="Webcam Stream">
         <div class="textarea-container">
+            <label for="outputText">Machine Learning Output:</label>
             <textarea id="outputText" readonly></textarea>
-            <textarea id="gpt_fix_outputText" readonly></textarea>
+            
+            <label for="Cloud_fix_outputText">Cloud Fixed Text:</label>
+            <textarea id="Cloud_fix_outputText" readonly></textarea>
         </div>
     </div>
+    
+    <script>
+        $(document).ready(function() {
+        setInterval(function() {
+        $.get("/get-cloud-text", function(data) {
+            let currentContent = $("#Cloud_fix_outputText").val();
+            if (data.startsWith(currentContent)) {
+                let additionalText = data.substring(currentContent.length);
+                $("#Cloud_fix_outputText").val(currentContent + additionalText);
+            } else {
+                // If the received data is entirely different, just set it
+                $("#Cloud_fix_outputText").val(data);
+            }
+        });
+        }, 1000);
+    });
+    </script>
     
     <script>
         $(document).ready(function() {
