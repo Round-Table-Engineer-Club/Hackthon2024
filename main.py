@@ -2,7 +2,7 @@ import cv2  # Import the OpenCV library for video capture and processing
 from flask import Flask, Response, render_template  # Import Flask for building a web application
 
 app = Flask(__name__)  # Create a Flask web application instance
-camera = cv2.VideoCapture(1)  # Initialize a video capture object for camera index 1
+camera = cv2.VideoCapture(0)  # Initialize a video capture object for camera index 1
 camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)  # Set the frame width to 640 pixels
 camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)  # Set the frame height to 480 pixels
 
@@ -24,6 +24,7 @@ def generate():
 # def index():
 #     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
     # Define the root route, which returns a multipart response with the video stream
+    
 @app.route('/')
 def display_page():
     return render_template('index.html')
@@ -31,6 +32,20 @@ def display_page():
 @app.route('/video_camera')
 def video_camera():
     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+test = True #delete it after tput the logic
+@app.route('/get-text')
+def get_text():
+    # put the logic here
+
+    global test
+    print("Current test value:", test) 
+    if test:
+        test = False
+        return "abc"
+    else:
+        test = True
+        return "z"
 
 
 
