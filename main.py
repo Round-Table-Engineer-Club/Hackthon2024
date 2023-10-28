@@ -20,12 +20,18 @@ def generate():
     cv2.destroyAllWindows()  # Close any OpenCV windows
 
 # @app.route('/')
-def index():
-    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+# def index():
+#     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
     # Define the root route, which returns a multipart response with the video stream
 @app.route('/')
-def hello_world():
+def display_page():
     return render_template('index.html')
+
+@app.route('/video_feed')
+def video_feed():
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
