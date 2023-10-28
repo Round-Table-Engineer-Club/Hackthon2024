@@ -1,5 +1,5 @@
 import cv2  # Import the OpenCV library for video capture and processing
-from flask import Flask, Response  # Import Flask for building a web application
+from flask import Flask, Response, render_template  # Import Flask for building a web application
 
 app = Flask(__name__)  # Create a Flask web application instance
 camera = cv2.VideoCapture(1)  # Initialize a video capture object for camera index 1
@@ -19,10 +19,13 @@ def generate():
     camera.release()  # Release the camera object when done
     cv2.destroyAllWindows()  # Close any OpenCV windows
 
-@app.route('/')
+# @app.route('/')
 def index():
     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
     # Define the root route, which returns a multipart response with the video stream
+@app.route('/')
+def hello_world():
+    return render_template('index.html')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
