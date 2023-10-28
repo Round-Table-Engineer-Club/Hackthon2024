@@ -3,3 +3,4 @@ flagged/*
 flagged/**
 .idea/
 __pycache__/
+.env
