@@ -3,8 +3,8 @@ from flask import Flask, Response, render_template  # Import Flask for building 
 
 app = Flask(__name__)  # Create a Flask web application instance
 camera = cv2.VideoCapture(1)  # Initialize a video capture object for camera index 1
-camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)  # Set the frame width to 640 pixels
-camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)  # Set the frame height to 480 pixels
+camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)  # Set the frame width to 640 pixels
+camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)  # Set the frame height to 480 pixels
 
 def generate():
     while True:
@@ -28,9 +28,10 @@ def generate():
 def display_page():
     return render_template('index.html')
 
-@app.route('/video_feed')
-def video_feed():
+@app.route('/video_camera')
+def video_camera():
     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
 
 
 if __name__ == '__main__':
