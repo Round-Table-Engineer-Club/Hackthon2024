@@ -26,14 +26,27 @@
             object-fit: cover;
         }
 
+        .textarea-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
         #outputText {
             flex: 1;
             padding: 10px;
-            height: 100%;
             overflow-y: scroll;
+            font-size: 30px;
+            border-bottom: 1px solid black;  /* Optional border between the text areas */
+        }
 
+        #gpt_fix_outputText {
+            flex: 1;
+            padding: 10px;
+            overflow-y: scroll;
             font-size: 30px;
         }
+
     </style>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -49,10 +62,11 @@
      </nav>
      <div id="container">
         <img id="videoFeed" src="{{ url_for('video_camera') }}" style="height: 100%; width: 1px" alt="Webcam Stream">
-        <textarea id="outputText" readonly></textarea>
+        <div class="textarea-container">
+            <textarea id="outputText" readonly></textarea>
+            <textarea id="gpt_fix_outputText" readonly></textarea>
+        </div>
     </div>
-    
-
     
     <script>
         $(document).ready(function() {
