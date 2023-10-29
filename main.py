@@ -4,6 +4,7 @@ from flask import (
     Response,
     render_template,
 )  # Import Flask for building a web application
+from tokenizer import open_ai_formatting
 
 app = Flask(__name__)  # Create a Flask web application instance
 camera = cv2.VideoCapture(0)  # Initialize a video capture object for camera index 1
@@ -44,6 +45,8 @@ def video_camera():
 
 
 test = True  # delete it after tput the logic
+
+
 @app.route("/get-text")
 def get_text():
     # put the logic here
@@ -57,7 +60,10 @@ def get_text():
         test = True
         return "abcc"
 
+
 cloudtest = True  # delete it after tput the logic
+
+
 @app.route("/get-cloud-text")
 def get_cloud_text():
     # put the logic here
@@ -70,7 +76,8 @@ def get_cloud_text():
     else:
         cloudtest = True
         return "efg"
-    
+
+
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
     # Start the Flask web application with debugging enabled, listening on all available network interfaces and port 5000
