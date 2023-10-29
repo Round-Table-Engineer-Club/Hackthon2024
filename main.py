@@ -126,21 +126,29 @@ def generate():
 
         # hand marking
         frame = tracker.handsFinder(frame)
-        rectangle = tracker.calc_bounding_rect(
-            frame, tracker.results.multi_hand_landmarks[0]
-        )
-        # translate rectange to image
-        x1 = rectangle[0]
-        y1 = rectangle[1]
-        x2 = rectangle[2]
-        y2 = rectangle[3]
-        # crop image
-        frame = frame[y1:y2, x1:x2]
-        # resize image
-
         lmList = tracker.positionFinder(frame)
-        if len(lmList) != 0:
+        # if there is a hand exist
+        if len(lmList) == 21:
             print(lmList[4])
+            rectangle = tracker.calc_bounding_rect(
+                frame, tracker.results.multi_hand_landmarks[0]
+            )
+            # translate rectange to image
+            OFFSET = 10
+            WIDTH, HEIGHT, Z = frame.shape
+            x1 = 0 if rectangle[0] - OFFSET < 0 else rectangle[0] - OFFSET
+            y1 = 0 if rectangle[1] - OFFSET < 0 else rectangle[0] - OFFSET
+            x2 = WIDTH - 1 if  rectangle[2] + OFFSET >= WIDTH  else  rectangle[2] + OFFSET
+            y2 = HEIGHT - 1 if rectangle[3] + OFFSET >= HEIGHT else  rectangle[3] + OFFSET
+            # crop image
+            crop_frame = frame[y1:y2, x1:x2]
+            if crop_frame is not None and not crop_frame.size <= 200:
+                cv2.imwrite("test.jpg", crop_frame)
+
+
+            # resize image
+
+
 
         # image = image.convert('L')
         # predict_image = cv2.resize(frame, (28, 28))

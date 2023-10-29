@@ -39,7 +39,7 @@ class handTracker:
         if self.results.multi_hand_landmarks:
             Hand = self.results.multi_hand_landmarks[handNo]
             for id, lm in enumerate(Hand.landmark):
-                print(lm)
+                # print(lm)
                 h, w, c = image.shape
                 cx, cy = int(lm.x * w), int(lm.y * h)
                 lmlist.append([id, cx, cy])
