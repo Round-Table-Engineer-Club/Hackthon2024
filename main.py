@@ -119,17 +119,31 @@ def generate():
                     data_aux.append(y - min(y_))
 
                 if len(data_aux) <= 42:
-                    prediction = model.predict([np.asarray(data_aux)])
-                    probe = model.predict_proba([np.asarray(data_aux)])[0][
-                        int(prediction[0])
-                    ]
-                    predicted_character = labels_dict[int(prediction[0])]
+                    # prediction = model.predict([np.asarray(data_aux)])
+                    # probe = model.predict_proba([np.asarray(data_aux)])[0][
+                    #     int(prediction[0])
+                    # ]
+                    # test = model.predict_proba([np.asarray(data_aux)])
+                    # predicted_character = labels_dict[int(prediction[0])]
+                    probe_arr = model.predict_proba([np.asarray(data_aux)])[0]
+                    prediction = 0 #index
+                    probe = 0.0
+                    for i, e in enumerate(probe_arr):
+                        e = float(e)
+                        if e > probe:
+                            probe = e
+                            prediction = i
+                    predicted_character = labels_dict[int(prediction)]
+
                     if probe > 0.3:
                         pred_buffer.append(predicted_character)
+                        print(predicted_character, probe)
+
                 if counter >= 15 and len(pred_buffer) != 0:
                     counter = 0
                     machine_output += Counter(pred_buffer).most_common(1)[0][0]
                     print(Counter(pred_buffer).most_common(1)[0][0])
+                    pred_buffer = []
 
         elif len(machine_output) != 0:
             cloud_text = open_ai_formatting(machine_output)
