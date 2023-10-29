@@ -23,9 +23,13 @@ camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)  # Set the frame height to 480 pixels
 tracker = handTracker()
 model_path = "./hand/weight/best.pth"  # Update to your model file path
 
-model_dict = pickle.load(open('C:/Users/54189/Documents/python_workspace/Hackthon2024/hand/weight/model.p', 'rb'))
-model = model_dict['model']
-
+model_dict = pickle.load(
+    open(
+        "./hand/weight/model.p",
+        "rb",
+    )
+)
+model = model_dict["model"]
 
 
 # init style
@@ -33,16 +37,39 @@ mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 hands = mp_hands.Hands(static_image_mode=True, min_detection_confidence=0.3)
-labels_dict = {0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E',
-               5: 'F', 6: 'G', 7: 'H', 8: 'I', 9: 'J',
-               10: 'K', 11: 'L', 12: 'M', 13: 'N', 14: 'O',
-               15: 'P', 16: 'Q', 17: 'R', 18: 'S', 19: 'T',
-               20: 'U', 21: 'V', 22: 'W', 23: 'X', 24: 'Y', 25: 'Z'}
+labels_dict = {
+    0: "A",
+    1: "B",
+    2: "C",
+    3: "D",
+    4: "E",
+    5: "F",
+    6: "G",
+    7: "H",
+    8: "I",
+    9: "J",
+    10: "K",
+    11: "L",
+    12: "M",
+    13: "N",
+    14: "O",
+    15: "P",
+    16: "Q",
+    17: "R",
+    18: "S",
+    19: "T",
+    20: "U",
+    21: "V",
+    22: "W",
+    23: "X",
+    24: "Y",
+    25: "Z",
+}
 
 
 def generate():
     global machine_output, cloud_text
-    total_prediction =[]
+    total_prediction = []
 
     while True:
         key = cv2.waitKey(10)  # Wait 1 millisecond to check if a key has been pressed
@@ -71,7 +98,8 @@ def generate():
                     hand_landmarks,  # model output
                     mp_hands.HAND_CONNECTIONS,  # hand connections
                     mp_drawing_styles.get_default_hand_landmarks_style(),
-                    mp_drawing_styles.get_default_hand_connections_style())
+                    mp_drawing_styles.get_default_hand_connections_style(),
+                )
 
             for hand_landmarks in results.multi_hand_landmarks:
                 for i in range(len(hand_landmarks.landmark)):
@@ -87,12 +115,13 @@ def generate():
                     data_aux.append(x - min(x_))
                     data_aux.append(y - min(y_))
 
-                if (len(data_aux) <= 42):
-
+                if len(data_aux) <= 42:
                     prediction = model.predict([np.asarray(data_aux)])
-                    probe = model.predict_proba([np.asarray(data_aux)])[0][int(prediction[0])]
+                    probe = model.predict_proba([np.asarray(data_aux)])[0][
+                        int(prediction[0])
+                    ]
                     predicted_character = labels_dict[int(prediction[0])]
-                    if probe > .5:
+                    if probe > 0.5:
                         machine_output += predicted_character
 
                     print(predicted_character)
@@ -100,7 +129,6 @@ def generate():
         elif len(machine_output) != 0:
             cloud_text = open_ai_formatting(machine_output)
             machine_output = ""
-
 
         ret, buffer = cv2.imencode(".jpg", frame)  # Encode the frame as a JPEG image
         frame = buffer.tobytes()  # Convert the frame to bytes
@@ -131,6 +159,8 @@ def video_camera():
 test = True  # delete it after tput the logic
 
 machine_output = ""
+
+
 @app.route("/get-text")
 def get_text():
     # put the logic here
@@ -149,13 +179,15 @@ def get_text():
 cloudtest = True  # delete it after tput the logic
 
 cloud_text = ""
+
+
 @app.route("/get-cloud-text")
 def get_cloud_text():
     # put the logic here
 
     global cloudtest, cloud_text
 
-    return cloud_text;
+    return cloud_text
     # print("Current test value:", cloudtest)
     # if cloudtest:
     #     cloudtest = False
