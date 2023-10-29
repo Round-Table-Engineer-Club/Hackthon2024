@@ -8,7 +8,7 @@ from flask import (
     render_template,
 )  # Import Flask for building a web application
 import mediapipe as mp
-
+from collections import Counter
 from tokenizer.tokenizer import open_ai_formatting
 from tokenizer.util import handTracker
 
@@ -70,7 +70,8 @@ labels_dict = {
 def generate():
     global machine_output, cloud_text
     total_prediction = []
-
+    counter = 0
+    pred_buffer = []
     while True:
         key = cv2.waitKey(10)  # Wait 1 millisecond to check if a key has been pressed
         if key == 27:
@@ -92,6 +93,8 @@ def generate():
         H, W, _ = frame.shape
 
         if results.multi_hand_landmarks:
+            counter += 1
+
             for hand_landmarks in results.multi_hand_landmarks:
                 mp_drawing.draw_landmarks(
                     frame,  # image to draw
@@ -121,10 +124,12 @@ def generate():
                         int(prediction[0])
                     ]
                     predicted_character = labels_dict[int(prediction[0])]
-                    if probe > 0.5:
-                        machine_output += predicted_character
-
-                    print(predicted_character)
+                    if probe > 0.3:
+                        pred_buffer.append(predicted_character)
+                if counter >= 15 and len(pred_buffer) != 0:
+                    counter = 0
+                    machine_output += Counter(pred_buffer).most_common(1)[0][0]
+                    print(Counter(pred_buffer).most_common(1)[0][0])
 
         elif len(machine_output) != 0:
             cloud_text = open_ai_formatting(machine_output)
