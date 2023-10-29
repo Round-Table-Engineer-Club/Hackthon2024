@@ -1,125 +1,59 @@
+import pickle
+
 import cv2  # Import the OpenCV library for video capture and processing
 import numpy as np
-import torch
 from flask import (
     Flask,
     Response,
     render_template,
 )  # Import Flask for building a web application
-from torch import nn
+import mediapipe as mp
 
-
+from tokenizer.tokenizer import open_ai_formatting
 from tokenizer.util import handTracker
 
 
 # init
 app = Flask(__name__)  # Create a Flask web application instance
 camera = cv2.VideoCapture(0)  # Initialize a video capture object for camera index 1
-camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)  # Set the frame width to 640 pixels
-camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)  # Set the frame height to 480 pixels
+camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)  # Set the frame width to 640 pixels
+camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)  # Set the frame height to 480 pixels
 
-
-class CNN(nn.Module):
-    def __init__(self):
-        super(CNN, self).__init__()
-        self.layers1 = nn.Sequential(
-            nn.Conv2d(1, 16, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(16),
-            nn.ReLU(inplace=True),
-        )
-        self.layers2 = nn.Sequential(
-            nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-        )
-        self.layers3 = nn.Sequential(
-            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-        )
-        self.layers4 = nn.Sequential(
-            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True),
-        )
-        self.fc = nn.Sequential(
-            nn.Linear(7 * 7 * 128, 1024),
-            nn.ReLU(inplace=True),
-            nn.Linear(1024, 100),
-            nn.ReLU(inplace=True),
-            nn.Linear(100, 26),
-        )
-
-    def forward(self, x):
-        x = self.layers1(x)
-        x = self.layers2(x)
-        x = self.layers3(x)
-        x = self.layers4(x)
-        x = x.view(x.size(0), -1)
-        x = self.fc(x)
-
-        return x
-
-
-# Load the pre-trained model
-def load_model(device, model_path):
-    print("using {} device.".format(device))
-    # Initialize the model
-    model = CNN().to(device)
-
-    # Load the saved weights
-    model.load_state_dict(torch.load(model_path))
-
-    # Setting it to evaluation mode, this is important as it turns off features like dropout
-    model.eval()
-    return model
-
-
-def predict(image, model, device):
-    """
-    Make a prediction for a single image.
-
-    Args:
-        image (Tensor): A tensor containing the image to predict, shape should be (1, 28, 28) or corresponding dimensions.
-
-    Returns:
-        prediction (int): The predicted class label.
-    """
-    # If the image is not a tensor, conversion code might be needed here
-    # For instance, if the image is a PIL image, you might need to use transforms to convert it to a tensor
-
-    # Add an extra dimension (batch size = 1)
-    image = image.unsqueeze(
-        0
-    )  # the shape of the image is now (1, 1, 28, 28) if the original image was (1, 28, 28)
-    # Move the image to the device
-    image = image.to(device)
-
-    # Make a prediction using the model
-    output = model(image)
-
-    # Retrieve the highest probability class
-    prediction = torch.argmax(
-        output, dim=1
-    )  # this will give us the results for each item in the batch
-
-    return prediction.item()  # since batch size is 1, we just get the first item
-
-
+# model
 tracker = handTracker()
 model_path = "./hand/weight/best.pth"  # Update to your model file path
-use_cuda = torch.cuda.is_available()
-device = torch.device("cuda" if use_cuda else "cpu")
-model = load_model(device, model_path)
+
+model_dict = pickle.load(open('C:/Users/54189/Documents/python_workspace/Hackthon2024/hand/weight/model.p', 'rb'))
+model = model_dict['model']
+
+
+
+# init style
+mp_hands = mp.solutions.hands
+mp_drawing = mp.solutions.drawing_utils
+mp_drawing_styles = mp.solutions.drawing_styles
+hands = mp_hands.Hands(static_image_mode=True, min_detection_confidence=0.3)
+labels_dict = {0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E',
+               5: 'F', 6: 'G', 7: 'H', 8: 'I', 9: 'J',
+               10: 'K', 11: 'L', 12: 'M', 13: 'N', 14: 'O',
+               15: 'P', 16: 'Q', 17: 'R', 18: 'S', 19: 'T',
+               20: 'U', 21: 'V', 22: 'W', 23: 'X', 24: 'Y', 25: 'Z'}
 
 
 def generate():
+    global machine_output, cloud_text
+    total_prediction =[]
+
     while True:
         key = cv2.waitKey(10)  # Wait 1 millisecond to check if a key has been pressed
         if key == 27:
             break
+
+        # data
+        data_aux = []
+        x_ = []
+        y_ = []
+
         success, frame = camera.read()  # Capture a frame from the camera
         if not success:  # If capturing a frame fails, exit the loop
             break
@@ -127,43 +61,48 @@ def generate():
         # hand marking
         frame = tracker.handsFinder(frame)
         lmList = tracker.positionFinder(frame)
-        # if there is a hand exist
-        if len(lmList) == 21:
-            print(lmList[4])
-            rectangle = tracker.calc_bounding_rect(
-                frame, tracker.results.multi_hand_landmarks[0]
-            )
-            # translate rectange to image
-            OFFSET = 10
-            WIDTH, HEIGHT, Z = frame.shape
-            x1 = 0 if rectangle[0] - OFFSET < 0 else rectangle[0] - OFFSET
-            y1 = 0 if rectangle[1] - OFFSET < 0 else rectangle[0] - OFFSET
-            x2 = WIDTH - 1 if  rectangle[2] + OFFSET >= WIDTH  else  rectangle[2] + OFFSET
-            y2 = HEIGHT - 1 if rectangle[3] + OFFSET >= HEIGHT else  rectangle[3] + OFFSET
-            # crop image
-            crop_frame = frame[y1:y2, x1:x2]
-            if crop_frame is not None and not crop_frame.size <= 200:
-                cv2.imwrite("test.jpg", crop_frame)
+        results = tracker.results
+        H, W, _ = frame.shape
 
+        if results.multi_hand_landmarks:
+            for hand_landmarks in results.multi_hand_landmarks:
+                mp_drawing.draw_landmarks(
+                    frame,  # image to draw
+                    hand_landmarks,  # model output
+                    mp_hands.HAND_CONNECTIONS,  # hand connections
+                    mp_drawing_styles.get_default_hand_landmarks_style(),
+                    mp_drawing_styles.get_default_hand_connections_style())
 
-            # resize image
+            for hand_landmarks in results.multi_hand_landmarks:
+                for i in range(len(hand_landmarks.landmark)):
+                    x = hand_landmarks.landmark[i].x
+                    y = hand_landmarks.landmark[i].y
 
+                    x_.append(x)
+                    y_.append(y)
 
+                for i in range(len(hand_landmarks.landmark)):
+                    x = hand_landmarks.landmark[i].x
+                    y = hand_landmarks.landmark[i].y
+                    data_aux.append(x - min(x_))
+                    data_aux.append(y - min(y_))
 
-        # image = image.convert('L')
-        # predict_image = cv2.resize(frame, (28, 28))
-        # predict_image = np.array(predict_image)
-        # predict_image = torch.from_numpy(predict_image).float()
-        # predict_image = predict_image.unsqueeze(0)
-        # result = predict(predict_image, model, device)
-        # alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        # predicted_char = alphabet[result]
-        #
-        # print(f"Predicted character: {predicted_char}")
-        # print(result)
+                if (len(data_aux) <= 42):
+
+                    prediction = model.predict([np.asarray(data_aux)])
+                    probe = model.predict_proba([np.asarray(data_aux)])[0][int(prediction[0])]
+                    predicted_character = labels_dict[int(prediction[0])]
+                    if probe > .5:
+                        machine_output += predicted_character
+
+                    print(predicted_character)
+
+        elif len(machine_output) != 0:
+            cloud_text = open_ai_formatting(machine_output)
+            machine_output = ""
+
 
         ret, buffer = cv2.imencode(".jpg", frame)  # Encode the frame as a JPEG image
-
         frame = buffer.tobytes()  # Convert the frame to bytes
         yield (
             b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
@@ -191,36 +130,39 @@ def video_camera():
 
 test = True  # delete it after tput the logic
 
-
+machine_output = ""
 @app.route("/get-text")
 def get_text():
     # put the logic here
 
-    global test
-    print("Current test value:", test)
-    if test:
-        test = False
-        return "abc"
-    else:
-        test = True
-        return "abcc"
+    global test, machine_output
+    return machine_output
+    # print("Current test value:", test)
+    # if test:
+    #     test = False
+    #     return "GGGOBUCKSSS"
+    # else:
+    #     test = True
+    #     return "GGGOBUCKSSS"
 
 
 cloudtest = True  # delete it after tput the logic
 
-
+cloud_text = ""
 @app.route("/get-cloud-text")
 def get_cloud_text():
     # put the logic here
 
-    global cloudtest
-    print("Current test value:", cloudtest)
-    if cloudtest:
-        cloudtest = False
-        return "efh"
-    else:
-        cloudtest = True
-        return "efg"
+    global cloudtest, cloud_text
+
+    return cloud_text;
+    # print("Current test value:", cloudtest)
+    # if cloudtest:
+    #     cloudtest = False
+    #     return "GOBUCKS"
+    # else:
+    #     cloudtest = True
+    #     return "GOBUCKS"
 
 
 if __name__ == "__main__":
