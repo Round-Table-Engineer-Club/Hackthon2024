@@ -55,7 +55,7 @@ def main():
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     model=load_model(device,model_path)
-    image = Image.open('C:/Users/xiaog/Documents/Code/Hackthon/hand/test_3.jpg')
+    image = Image.open('C:/Users/54189/Documents/python_workspace/Hackthon2024/hand/test_1.jpg')
     image = image.convert('L')
     image = image.resize((28,28))
     image = np.array(image)
