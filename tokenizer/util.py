@@ -1,5 +1,6 @@
 import cv2
 import mediapipe as mp
+import numpy as np
 
 
 class handTracker:
@@ -38,6 +39,7 @@ class handTracker:
         if self.results.multi_hand_landmarks:
             Hand = self.results.multi_hand_landmarks[handNo]
             for id, lm in enumerate(Hand.landmark):
+                print(lm)
                 h, w, c = image.shape
                 cx, cy = int(lm.x * w), int(lm.y * h)
                 lmlist.append([id, cx, cy])
@@ -45,6 +47,23 @@ class handTracker:
                 cv2.circle(image, (cx, cy), 15, (255, 0, 255), cv2.FILLED)
 
         return lmlist
+
+    def calc_bounding_rect(self, image, landmarks):
+        image_width, image_height = image.shape[1], image.shape[0]
+
+        landmark_array = np.empty((0, 2), int)
+
+        for _, landmark in enumerate(landmarks.landmark):
+            landmark_x = min(int(landmark.x * image_width), image_width - 1)
+            landmark_y = min(int(landmark.y * image_height), image_height - 1)
+
+            landmark_point = [np.array((landmark_x, landmark_y))]
+
+            landmark_array = np.append(landmark_array, landmark_point, axis=0)
+
+        x, y, w, h = cv2.boundingRect(landmark_array)
+
+        return [x, y, x + w, y + h]
 
 
 def main():

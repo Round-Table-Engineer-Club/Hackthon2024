@@ -19,46 +19,45 @@ camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)  # Set the frame width to 640 pixels
 camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)  # Set the frame height to 480 pixels
 
 
-
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
         self.layers1 = nn.Sequential(
-            nn.Conv2d(1,16,kernel_size=3,stride=1,padding=1),
+            nn.Conv2d(1, 16, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(16),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True),
         )
         self.layers2 = nn.Sequential(
-            nn.Conv2d(16,32,kernel_size=3,stride=1,padding=1),
+            nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2,stride=2)
+            nn.MaxPool2d(kernel_size=2, stride=2),
         )
         self.layers3 = nn.Sequential(
-            nn.Conv2d(32,64,kernel_size=3,stride=1,padding=1),
+            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2)
+            nn.MaxPool2d(kernel_size=2, stride=2),
         )
         self.layers4 = nn.Sequential(
-            nn.Conv2d(64,128,kernel_size=3,stride=1,padding=1),
+            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(128),
             nn.ReLU(inplace=True),
-
         )
         self.fc = nn.Sequential(
-            nn.Linear(7*7*128,1024),
+            nn.Linear(7 * 7 * 128, 1024),
             nn.ReLU(inplace=True),
-            nn.Linear(1024,100),
+            nn.Linear(1024, 100),
             nn.ReLU(inplace=True),
-            nn.Linear(100,26)
+            nn.Linear(100, 26),
         )
+
     def forward(self, x):
         x = self.layers1(x)
         x = self.layers2(x)
         x = self.layers3(x)
         x = self.layers4(x)
-        x = x.view(x.size(0),-1)
+        x = x.view(x.size(0), -1)
         x = self.fc(x)
 
         return x
@@ -79,7 +78,7 @@ def load_model(device, model_path):
 
 
 def predict(image, model, device):
-    '''
+    """
     Make a prediction for a single image.
 
     Args:
@@ -87,12 +86,14 @@ def predict(image, model, device):
 
     Returns:
         prediction (int): The predicted class label.
-    '''
+    """
     # If the image is not a tensor, conversion code might be needed here
     # For instance, if the image is a PIL image, you might need to use transforms to convert it to a tensor
 
     # Add an extra dimension (batch size = 1)
-    image = image.unsqueeze(0)  # the shape of the image is now (1, 1, 28, 28) if the original image was (1, 28, 28)
+    image = image.unsqueeze(
+        0
+    )  # the shape of the image is now (1, 1, 28, 28) if the original image was (1, 28, 28)
     # Move the image to the device
     image = image.to(device)
 
@@ -100,28 +101,43 @@ def predict(image, model, device):
     output = model(image)
 
     # Retrieve the highest probability class
-    prediction = torch.argmax(output, dim=1)  # this will give us the results for each item in the batch
+    prediction = torch.argmax(
+        output, dim=1
+    )  # this will give us the results for each item in the batch
 
     return prediction.item()  # since batch size is 1, we just get the first item
 
 
-
-
 tracker = handTracker()
-model_path = 'C:/Users/54189/Documents/python_workspace/Hackthon2024/hand/weight/best.pth'  # Update to your model file path
+model_path = "./hand/weight/best.pth"  # Update to your model file path
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
 model = load_model(device, model_path)
 
-def generate():
 
+def generate():
     while True:
+        key = cv2.waitKey(10)  # Wait 1 millisecond to check if a key has been pressed
+        if key == 27:
+            break
         success, frame = camera.read()  # Capture a frame from the camera
         if not success:  # If capturing a frame fails, exit the loop
             break
 
         # hand marking
         frame = tracker.handsFinder(frame)
+        rectangle = tracker.calc_bounding_rect(
+            frame, tracker.results.multi_hand_landmarks[0]
+        )
+        # translate rectange to image
+        x1 = rectangle[0]
+        y1 = rectangle[1]
+        x2 = rectangle[2]
+        y2 = rectangle[3]
+        # crop image
+        frame = frame[y1:y2, x1:x2]
+        # resize image
+
         lmList = tracker.positionFinder(frame)
         if len(lmList) != 0:
             print(lmList[4])
