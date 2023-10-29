@@ -16,19 +16,13 @@ from tokenizer.util import handTracker
 # init
 app = Flask(__name__)  # Create a Flask web application instance
 camera = cv2.VideoCapture(0)  # Initialize a video capture object for camera index 1
-camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)  # Set the frame width to 640 pixels
-camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)  # Set the frame height to 480 pixels
+# camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)  # Set the frame width to 640 pixels
+# camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)  # Set the frame height to 480 pixels
 
 # model
 tracker = handTracker()
-model_path = "./hand/weight/best.pth"  # Update to your model file path
 
-model_dict = pickle.load(
-    open(
-        "./hand/weight/model.p",
-        "rb",
-    )
-)
+model_dict = pickle.load(open("./hand/weight/model.p","rb"))
 model = model_dict["model"]
 
 
@@ -69,13 +63,11 @@ labels_dict = {
 
 def generate():
     global machine_output, cloud_text
-    total_prediction = []
-    counter = 0
-    pred_buffer = []
+    total_prediction = [0] * 27
     while True:
-        key = cv2.waitKey(10)  # Wait 1 millisecond to check if a key has been pressed
-        if key == 27:
-            break
+        # key = cv2.waitKey(10)  # Wait 1 millisecond to check if a key has been pressed
+        # if key == 27:
+        #     break
 
         # data
         data_aux = []
@@ -83,17 +75,17 @@ def generate():
         y_ = []
 
         success, frame = camera.read()  # Capture a frame from the camera
-        if not success:  # If capturing a frame fails, exit the loop
-            break
+        # if not success:  # If capturing a frame fails, exit the loop
+        #     break
 
         # hand marking
-        frame = tracker.handsFinder(frame)
-        lmList = tracker.positionFinder(frame)
-        results = tracker.results
+        # frame = tracker.handsFinder(frame)
+        # lmList = tracker.positionFinder(frame)
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
+        results = hands.process(frame_rgb)
         H, W, _ = frame.shape
 
         if results.multi_hand_landmarks:
-            counter += 1
 
             for hand_landmarks in results.multi_hand_landmarks:
                 mp_drawing.draw_landmarks(
@@ -101,8 +93,8 @@ def generate():
                     hand_landmarks,  # model output
                     mp_hands.HAND_CONNECTIONS,  # hand connections
                     mp_drawing_styles.get_default_hand_landmarks_style(),
-                    mp_drawing_styles.get_default_hand_connections_style(),
-                )
+                    mp_drawing_styles.get_default_hand_connections_style())
+            
 
             for hand_landmarks in results.multi_hand_landmarks:
                 for i in range(len(hand_landmarks.landmark)):
@@ -117,37 +109,51 @@ def generate():
                     y = hand_landmarks.landmark[i].y
                     data_aux.append(x - min(x_))
                     data_aux.append(y - min(y_))
-
-                if len(data_aux) <= 42:
+                if len(data_aux) == 0:
+                    total_prediction[27]+=1
+                elif len(data_aux) == 42:
                     # prediction = model.predict([np.asarray(data_aux)])
                     # probe = model.predict_proba([np.asarray(data_aux)])[0][
                     #     int(prediction[0])
                     # ]
                     # test = model.predict_proba([np.asarray(data_aux)])
                     # predicted_character = labels_dict[int(prediction[0])]
-                    probe_arr = model.predict_proba([np.asarray(data_aux)])[0]
-                    prediction = 0 #index
-                    probe = 0.0
-                    for i, e in enumerate(probe_arr):
-                        e = float(e)
-                        if e > probe:
-                            probe = e
-                            prediction = i
-                    predicted_character = labels_dict[int(prediction)]
+                    x1 = int(min(x_) * W) - 10
+                    y1 = int(min(y_) * H) - 10
 
-                    if probe > 0.3:
-                        pred_buffer.append(predicted_character)
-                        print(predicted_character, probe)
+                    x2 = int(max(x_) * W) - 10
+                    y2 = int(max(y_) * H) - 10
+                    prediction = model.predict([np.asarray(data_aux)])
+                    # probe = model.predict_proba([np.asarray(data_aux)])[0]
+                    total_prediction[int(prediction[0])]+=1
+                    predicted_character = labels_dict[int(prediction[0])]
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 0), 4)
+                    cv2.putText(frame, predicted_character, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 0, 0), 3,cv2.LINE_AA)
+                    
+                    for i in range(len(total_prediction)):
+                        if total_prediction[i] > 50:
+                            machine_output += labels_dict[i]
+                            print(labels_dict[i], total_prediction[i])
+                            total_prediction=[0] * 27
+                            break
+                    # if probe > 0.3:
+                    #     pred_buffer.append(predicted_character)
+                    #     print(predicted_character, probe)
 
-                if counter >= 15 and len(pred_buffer) != 0:
-                    counter = 0
-                    machine_output += Counter(pred_buffer).most_common(1)[0][0]
-                    print(Counter(pred_buffer).most_common(1)[0][0])
-                    pred_buffer = []
-
-        elif len(machine_output) != 0:
+                # if counter >= 15 and len(pred_buffer) != 0:
+                #     counter = 0
+                #     machine_output += Counter(pred_buffer).most_common(1)[0][0]
+                #     print(Counter(pred_buffer).most_common(1)[0][0])
+                #     pred_buffer = []
+        elif len(machine_output) >= 2 and machine_output[-3:] == "___":
             cloud_text = open_ai_formatting(machine_output)
             machine_output = ""
+        else:
+            total_prediction[26]+=1
+            if total_prediction[26] > 50:
+                machine_output += "_"
+                total_prediction=[0] * 27
+        
 
         ret, buffer = cv2.imencode(".jpg", frame)  # Encode the frame as a JPEG image
         frame = buffer.tobytes()  # Convert the frame to bytes
@@ -205,6 +211,9 @@ def get_cloud_text():
     # put the logic here
 
     global cloudtest, cloud_text
+
+    if cloud_text is None or cloud_text == "":
+        return "No data available"
 
     return cloud_text
     # print("Current test value:", cloudtest)
